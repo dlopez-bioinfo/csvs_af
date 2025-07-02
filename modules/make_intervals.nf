@@ -8,15 +8,15 @@ process MAKE_INTERVALS {
     label 'single_proc'
 
     input:
-        path bed_info_list        
+        tuple val(bed_names_input), path(bed_paths_input)
         path sizes
         
     output:
         path "intervals.txt"
 
     script:
-        def bed_names = bed_info_list.collect { it }.join(' ')
-        def bed_paths = bed_info_list.collect { it.getName() }.join(' ')
+        def bed_names = bed_names_input.collect { it }.join(' ')
+        def bed_paths = bed_paths_input.collect { it.getName() }.join(' ')
         """
             bedtools multiinter \\
                 -header \\
