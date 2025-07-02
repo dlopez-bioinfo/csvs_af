@@ -51,7 +51,7 @@ workflow {
             def bed_name = bed_path.md5()
             tuple(sample_id, vcf_path, bed_name, bed_path)
         }
-        .dump(tag: 'SAMPLE_BED')
+        //.dump(tag: 'SAMPLE_BED')
         .set { ch_sample_bed }
 
  
@@ -97,11 +97,11 @@ workflow {
             def bed_list = row.list.split(',').collect { it.trim() }
             bed_list.collect { bed -> tuple(bed, region_id) }
         }
-        .dump(tag:'INTERVAL')
+        //.dump(tag:'INTERVAL')
         .combine(NORMALIZE_VCF.out, by: 0)
         .groupTuple(by: 1)
         .map { bed_names, interval, bed_paths, ids, vcfs, idx -> tuple(interval, vcfs, idx)} 
-        .dump(tag:'GROUPED')
+        //.dump(tag:'GROUPED')
         .set { ch_interval_vcfs }
 
     MERGE_INTERVAL(
