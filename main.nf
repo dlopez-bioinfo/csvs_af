@@ -60,7 +60,7 @@ workflow {
         .filter { id, vcf, bed_name, bed_path -> bed_path.trim() != params.genome_sample_str }  
         .map { id, vcf, bed_name, bed_path -> tuple(bed_name, bed_path) }
         .unique()
-        .dump(tag: 'BED_LIST')        
+        //.dump(tag: 'BED_LIST')        
         .set { ch_bed_list }
 
      // Sort bed and rename to unique names
@@ -76,7 +76,7 @@ workflow {
             def paths = list_of_tuples*.getAt(1)
             return tuple(names, paths)
         }
-        .dump(tag: 'SORTED_BED_LIST2')        
+        //.dump(tag: 'SORTED_BED_LIST2')        
         .set { ch_sorted_bed_list }
 
     // create intervals    
@@ -87,7 +87,8 @@ workflow {
     // normalize VCFs
     NORMALIZE_VCF(
         ch_sample_bed,
-        params.ref_genome)
+        params.ref_genome,
+        params.ref_genome_fai)
 
     // Create list of VCFs per interval
     MAKE_INTERVALS.out
@@ -105,9 +106,9 @@ workflow {
         .set { ch_interval_vcfs }
 
     MERGE_INTERVAL(
-        ch_interval_vcfs,        
-        params.ref_genome
-        )
+        ch_interval_vcfs,
+        params.ref_genome,
+        params.ref_genome_fai)
 
     CONCAT(
         MERGE_INTERVAL.out.collect()
