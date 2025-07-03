@@ -11,6 +11,7 @@ process MERGE_INTERVAL {
     input:
         tuple val(interval), path(vcf_list), path(vcf_idx)
         path ref_genome
+        path ref_genome_fai
 
         
     output:

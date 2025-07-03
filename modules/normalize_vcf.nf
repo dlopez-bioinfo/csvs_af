@@ -11,6 +11,7 @@ process NORMALIZE_VCF {
     input:
         tuple val(id), path(vcf), val(bed_name), val(bed_path)
         path ref_genome
+        path ref_genome_fai
         
     output:
         tuple val(bed_name), val(bed_path), val(id), path("*_norm.vcf.gz"), path("*_norm.vcf.gz.csi")
