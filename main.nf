@@ -14,6 +14,7 @@ include { NORMALIZE_VCF } from './modules/normalize_vcf'
 include { MERGE_INTERVAL } from './modules/merge_interval'
 include { CONCAT } from './modules/concat'
 include { SORT_BED } from './modules/sort_bed'
+include { PROCESS_INTERVALS } from './modules/process_intervals'
 
 /*
 ================================================================
@@ -68,12 +69,15 @@ workflow {
         ch_bed_list
         )
 
-    SORT_BED.out
-        .map { id, path -> tuple(id, file(path)) }
-        .collect(flat:false) 
+    SORT_BED.out        
+        .map { id, path -> tuple(id, file(path)) }        
+        .collect(flat:false)         
         .map { list_of_tuples ->
-            def names = list_of_tuples*.getAt(0)
-            def paths = list_of_tuples*.getAt(1)
+            // Ordenar por id (primer elemento del tuple)
+            def sorted = list_of_tuples.sort { a, b -> a[0] <=> b[0] } // sort by bed_name to allow caching
+
+            def names = sorted*.getAt(0)
+            def paths = sorted*.getAt(1)
             return tuple(names, paths)
         }
         //.dump(tag: 'SORTED_BED_LIST2')        
@@ -81,8 +85,10 @@ workflow {
 
     // create intervals    
     MAKE_INTERVALS(
-        ch_sorted_bed_list,
-        params.ref_genome_sizes)
+        ch_sorted_bed_list, //[bed_name, bed_path]
+        params.ref_genome_sizes) | PROCESS_INTERVALS
+
+    
 
     // normalize VCFs
     NORMALIZE_VCF(
@@ -91,18 +97,12 @@ workflow {
         params.ref_genome_fai)
 
     // Create list of VCFs per interval
-    MAKE_INTERVALS.out
-        .splitCsv(header: true, sep: '\t')
-        .flatMap { row ->
-            def region_id = "${row.chrom}_${row.start}_${row.end}"
-            def bed_list = row.list.split(',').collect { it.trim() }
-            bed_list.collect { bed -> tuple(bed, region_id) }
-        }
-        //.dump(tag:'INTERVAL')
-        .combine(NORMALIZE_VCF.out, by: 0)
+    PROCESS_INTERVALS.out
+        .splitCsv(header: true, sep: '\t')  // [bed_name, interval_list]      
+        .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index]
+        .dump(tag:'INTERVAL')
         .groupTuple(by: 1)
-        .map { bed_names, interval, bed_paths, ids, vcfs, idx -> tuple(interval, vcfs, idx)} 
-        //.dump(tag:'GROUPED')
+        .dump(tag: 'GROUPED_INTERVAL')
         .set { ch_interval_vcfs }
 
     MERGE_INTERVAL(
