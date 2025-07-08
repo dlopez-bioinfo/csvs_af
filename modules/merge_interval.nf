@@ -1,35 +1,38 @@
 #!/usr/bin/env nextflow
 
 // Using DSL-2
-nextflow.enable.dsl = 2
+//nextflow.enable.dsl = 2
 
 process MERGE_INTERVAL {
     container "${params.container__bcftools}"
     label 'single_proc'
-    tag "$interval"
+
 
     input:
-        tuple val(interval), path(vcf_list), path(vcf_idx)
+        tuple val(raw_intervals), path(vcf_list), path(vcf_index)
         path ref_genome
         path ref_genome_fai
 
         
     output:
-        tuple path("csvs_*.vcf.gz"), path("csvs_*.vcf.gz.csi")
+        tuple path("*_merged.vcf.gz"), path("*_merged.vcf.gz.csi")
 
-    script:
-        def out = "csvs_${interval}.vcf.gz"
+    script:        
         def vcf_files = vcf_list.collect { it.getName() }
-        def region = interval.replaceAll('_', '-').replaceFirst('-', ':')
+        def out = raw_intervals.md5() + "_merged.vcf.gz"
 
         if (vcf_files.size() == 1) {
             """
-            bcftools view ${vcf_files[0]} -o ${out} -O z -G -r ${region}
+            echo "${raw_intervals}" | tr ',' '\n' | awk -F"_" '{print \$1"\t"\$2"\t"\$3}' > regions.bed   
+
+            bcftools view ${vcf_files[0]} -o ${out} -O z -G -R regions.bed
             bcftools index ${out}
             """
         } else {
             """
-            bcftools merge ${vcf_files.join(' ')} -0 -r ${region} | \\
+            echo "${raw_intervals}" | tr ',' '\n' | awk -F"_" '{print \$1"\t"\$2"\t"\$3}' > regions.bed   
+
+            bcftools merge ${vcf_files.join(' ')} -0 -R regions.bed | \\
                 bcftools norm -D -d both -f ${ref_genome} | \\
                 bcftools view -o ${out} -O z -G
             bcftools index ${out}

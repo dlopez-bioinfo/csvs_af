@@ -17,6 +17,6 @@ process SORT_BED {
     script:
         """
         out="${bed_name}_sorted.bed"
-        bedtools sort -i ${bed_path} > \${out}
+        bedtools sort -i ${bed_path} | sed -r 's/^chr//g' > \${out}
         """
 }

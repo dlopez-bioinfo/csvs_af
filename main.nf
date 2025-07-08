@@ -49,7 +49,7 @@ workflow {
         .map { line -> 
             def (bed_path, vcf_path) = line.trim().tokenize('\t')
             def sample_id = vcf_path.tokenize('/').last().replaceFirst(/\.vcf\.gz$/, '')
-            def bed_name = bed_path.md5()
+            def bed_name = bed_path.trim() == params.genome_sample_str ? bed_path : bed_path.md5()
             tuple(sample_id, vcf_path, bed_name, bed_path)
         }
         //.dump(tag: 'SAMPLE_BED')
@@ -88,7 +88,6 @@ workflow {
         ch_sorted_bed_list, //[bed_name, bed_path]
         params.ref_genome_sizes) | PROCESS_INTERVALS
 
-    
 
     // normalize VCFs
     NORMALIZE_VCF(
@@ -96,14 +95,24 @@ workflow {
         params.ref_genome,
         params.ref_genome_fai)
 
+
     // Create list of VCFs per interval
     PROCESS_INTERVALS.out
-        .splitCsv(header: true, sep: '\t')  // [bed_name, interval_list]      
-        .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index]
-        .dump(tag:'INTERVAL')
+        .splitCsv(header: true, sep: '\t')
+        .map { row -> return tuple(row.list, row.id)}  // [bed_name, interval_list]      
+        .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index]        
         .groupTuple(by: 1)
-        .dump(tag: 'GROUPED_INTERVAL')
+        .map { bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx ->
+            // create a region file
+            //def temp_file = new File("regions_raw.txt")
+            //temp_file.text = interval_list
+
+            //return tuple(temp_file, vcf_list, vcf_idx)
+            return tuple(interval_list, vcf_list, vcf_idx)
+        }
+        //.dump(tag: 'INTERVAL_VCF_LIST') // [bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx]
         .set { ch_interval_vcfs }
+
 
     MERGE_INTERVAL(
         ch_interval_vcfs,
