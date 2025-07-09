@@ -5,7 +5,7 @@ nextflow.enable.dsl = 2
 
 process PROCESS_INTERVALS {
     container "${params.container__pandas}"
-    label 'single_proc'
+    label 'high_mem'
 
     input:        
         path intervals
