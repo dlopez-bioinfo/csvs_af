@@ -5,7 +5,7 @@
 
 process MERGE_INTERVAL {
     container "${params.container__bcftools}"
-    label 'single_proc'
+    label 'high_proc'
 
 
     input:
@@ -20,22 +20,23 @@ process MERGE_INTERVAL {
     script:        
         def vcf_files = vcf_list.collect { it.getName() }
         def out = raw_intervals.md5() + "_merged.vcf.gz"
+        def half_cpus = (task.cpus / 2).toInteger()
 
         if (vcf_files.size() == 1) {
             """
             echo "${raw_intervals}" | tr ',' '\n' | awk -F"_" '{print \$1"\t"\$2"\t"\$3}' > regions.bed   
 
-            bcftools view ${vcf_files[0]} -o ${out} -O z -G -R regions.bed
-            bcftools index ${out}
+            bcftools view ${vcf_files[0]} -o ${out} -O z -G -R regions.bed --threads ${task.cpus}
+            bcftools index ${out} --threads ${task.cpus}
             """
         } else {
             """
             echo "${raw_intervals}" | tr ',' '\n' | awk -F"_" '{print \$1"\t"\$2"\t"\$3}' > regions.bed   
 
-            bcftools merge ${vcf_files.join(' ')} -0 -R regions.bed | \\
-                bcftools norm -D -d both -f ${ref_genome} | \\
-                bcftools view -o ${out} -O z -G
-            bcftools index ${out}
+            bcftools merge *.vcf.gz -0 -R regions.bed --threads ${half_cpus} | \\
+                bcftools norm -d exact -d both -f ${ref_genome} | \\
+                bcftools view -o ${out} -O z -G --threads ${half_cpus}
+            bcftools index ${out} --threads ${half_cpus}
             """
         }
 }
