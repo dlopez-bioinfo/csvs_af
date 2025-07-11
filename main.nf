@@ -95,9 +95,10 @@ workflow {
         params.ref_genome,
         params.ref_genome_fai)
 
-
+    
     // Create list of VCFs per interval
     PROCESS_INTERVALS.out
+        .flatten()
         .splitCsv(header: true, sep: '\t')
         .map { row -> return tuple(row.list, row.id)}  // [bed_name, interval_list]      
         .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index]        
