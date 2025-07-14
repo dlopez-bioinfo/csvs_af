@@ -17,9 +17,10 @@ process CONCAT {
 
     script:
         def out = "csvs.vcf.gz"
+        def half_cpus = (task.cpus / 2).toInteger()
 
         """
-        bcftools concat --threads ${task.cpus} *.vcf.gz | bcftools sort -o ${out} -O z
-        bcftools index ${out}
+        bcftools concat -a --threads ${task.cpus} *.vcf.gz | bcftools sort -o ${out} -Oz
+        bcftools index ${out} --threads ${task.cpus}
         """
 }
