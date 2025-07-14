@@ -9,7 +9,7 @@ process NORMALIZE_VCF {
     tag "$id"
 
     input:
-        tuple val(id), path(vcf), val(bed_name), val(bed_path)
+        tuple val(id), path(vcf), val(bed_name), val(bed_path), val(gender)
         path ref_genome
         path ref_genome_fai
         
@@ -26,8 +26,13 @@ process NORMALIZE_VCF {
                 echo "chr\${i} \${i}" >> chr_list.txt
             done 
 
+            id=\$(bcftools query -l ${vcf})
+
+            echo "\${id} ${gender}" > gender.txt
+
             bcftools annotate -x INFO,^FORMAT/GT --force --rename-chrs chr_list.txt ${vcf} | \\
                 bcftools norm --threads ${half_cpus} -d exact -d both -f ${ref_genome} --check-ref ws --targets \$(echo {1..22} X Y MT|sed 's/ /,/g') | \\
+                bcftools +fixploidy -- -s gender.txt | \\
                 bcftools view --exclude-uncalled --threads ${half_cpus} -o ${out} -O z 
 
             bcftools index --threads ${half_cpus} ${out}

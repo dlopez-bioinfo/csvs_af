@@ -47,10 +47,10 @@ workflow {
     Channel.fromPath(params.sample_bed_file)
         .splitText()
         .map { line -> 
-            def (bed_path, vcf_path) = line.trim().tokenize('\t')
+            def (bed_path, vcf_path, gender) = line.trim().tokenize('\t')
             def sample_id = vcf_path.tokenize('/').last().replaceFirst(/\.vcf\.gz$/, '')
             def bed_name = bed_path.trim() == params.genome_sample_str ? bed_path : bed_path.md5()
-            tuple(sample_id, vcf_path, bed_name, bed_path)
+            tuple(sample_id, vcf_path, bed_name, bed_path, gender)
         }
         //.dump(tag: 'SAMPLE_BED')
         .set { ch_sample_bed }
@@ -58,8 +58,8 @@ workflow {
  
     // set bed channel
         ch_sample_bed
-        .filter { id, vcf, bed_name, bed_path -> bed_path.trim() != params.genome_sample_str }  
-        .map { id, vcf, bed_name, bed_path -> tuple(bed_name, bed_path) }
+        .filter { id, vcf, bed_name, bed_path, gender -> bed_path.trim() != params.genome_sample_str }  
+        .map { id, vcf, bed_name, bed_path, gender -> tuple(bed_name, bed_path) }
         .unique()
         //.dump(tag: 'BED_LIST')        
         .set { ch_bed_list }
