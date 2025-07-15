@@ -120,26 +120,10 @@ workflow {
         params.ref_genome,
         params.ref_genome_fai)
 
-    
-    
-    Channel.fromPath(params.sample_bed_file)
-        .map { f -> 
-            f.md5()
-        }
-        .set { ch_sample_md5 }
-
- 
-    // set bed channel
-        ch_sample_bed
-        .filter { id, vcf, bed_name, bed_path, gender -> bed_path.trim() != params.genome_sample_str }  
-        .map { id, vcf, bed_name, bed_path, gender -> tuple(bed_name, bed_path) }
-        .unique()
-        //.dump(tag: 'BED_LIST')        
-        .set { ch_bed_list }
 
     CONCAT(
         MERGE_INTERVAL.out.collect(),
-        ch_sample_md5
+        params.sample_bed_file
         )
 }
 
