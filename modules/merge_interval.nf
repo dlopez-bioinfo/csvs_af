@@ -37,7 +37,7 @@ process MERGE_INTERVAL {
 
             bcftools merge *_norm.vcf.gz -0 -r \${chr} --threads ${quarter_cpus} | \\
                 bcftools norm -d exact -d both -f ${ref_genome} -T regions.bed --threads ${quarter_cpus} | \\
-                bcftools +fill-tags -- -t all | \\
+                bcftools +fill-tags -- -t "AC,AN,AF" | \\
                 bcftools view -o ${out} -O z -G --threads ${half_cpus}
             bcftools index ${out} --threads ${task.cpus}
             """
