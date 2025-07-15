@@ -35,8 +35,9 @@ process MERGE_INTERVAL {
             echo "${raw_intervals}" | tr ',' '\n' | awk -F"_" '{print \$1"\t"\$2"\t"\$3}' > regions.bed
             chr=\$(head -n 1 regions.bed | cut -f 1)   
 
-            bcftools merge *.vcf.gz -0 -r \${chr} --threads ${quarter_cpus} | \\
+            bcftools merge *_norm.vcf.gz -0 -r \${chr} --threads ${quarter_cpus} | \\
                 bcftools norm -d exact -d both -f ${ref_genome} -T regions.bed --threads ${quarter_cpus} | \\
+                bcftools +fill-tags -- -t all | \\
                 bcftools view -o ${out} -O z -G --threads ${half_cpus}
             bcftools index ${out} --threads ${task.cpus}
             """
