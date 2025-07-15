@@ -35,7 +35,7 @@ process NORMALIZE_VCF {
                 bcftools +setGT -- -n . -i'FILTER!="PASS"' -tq | \\
                 bcftools +fixploidy -- -s gender.txt | \\
                 bcftools +fill-tags -- -t all | \\
-                bcftools view --exclude-uncalled --threads ${half_cpus} -o ${out} -O z 
+                bcftools view --threads ${half_cpus} -o ${out} -O z 
 
             bcftools index --threads ${half_cpus} ${out}
         """
