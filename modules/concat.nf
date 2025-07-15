@@ -11,16 +11,18 @@ process CONCAT {
 
     input:
         path(vcf_list)
+        val(sample_md5)
         
     output:
-        tuple path("csvs.vcf.gz"), path("csvs.vcf.gz.csi")
+        tuple path("csvs_*.vcf.gz"), path("csvs_*.vcf.gz.csi")
 
     script:
-        def out = "csvs.vcf.gz"
-        def half_cpus = (task.cpus / 2).toInteger()
+        def out = "csvs_${sample_md5}.vcf.gz"
 
         """
-        bcftools concat -a --threads ${task.cpus} *.vcf.gz | bcftools sort -o ${out} -Oz
+        bcftools merge  --threads ${task.cpus} *_merged.vcf.gz | \\
+          bcftools +fill-tags -- -t "AC,AN,AF" | \\ 
+          bcftools sort -o ${out} -Oz
         bcftools index ${out} --threads ${task.cpus}
         """
 }
