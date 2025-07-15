@@ -33,6 +33,7 @@ process NORMALIZE_VCF {
             bcftools annotate -x INFO,^FORMAT/GT --force --rename-chrs chr_list.txt ${vcf} | \\
                 bcftools norm --threads ${half_cpus} -d exact -d both -f ${ref_genome} --check-ref ws --targets \$(echo {1..22} X Y MT|sed 's/ /,/g') | \\
                 bcftools +fixploidy -- -s gender.txt | \\
+                bcftools +fill-tags -- -t all | \\
                 bcftools view --exclude-uncalled --threads ${half_cpus} -o ${out} -O z 
 
             bcftools index --threads ${half_cpus} ${out}
