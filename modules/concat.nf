@@ -18,7 +18,7 @@ process CONCAT {
 
     script:
         """
-        OUT=\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')
+        OUT="csvs_"\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')".vcf.gz"
 
         bcftools merge  --threads ${task.cpus} *_merged.vcf.gz | \\
           bcftools +fill-tags -- -t "AC,AN,AF" | \\
