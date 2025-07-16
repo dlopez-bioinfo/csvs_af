@@ -15,6 +15,7 @@ include { MERGE_INTERVAL } from './modules/merge_interval'
 include { CONCAT } from './modules/concat'
 include { SORT_BED } from './modules/sort_bed'
 include { PROCESS_INTERVALS } from './modules/process_intervals'
+include { REDUCE_INTERVALS } from './modules/reduce_intervals'
 
 /*
 ================================================================
@@ -96,25 +97,30 @@ workflow {
         params.ref_genome_fai)
 
     
-    // Create list of VCFs per interval
+    // Create interval files
     PROCESS_INTERVALS.out
         .flatten()
         .splitCsv(header: true, sep: '\t')
-        .map { row -> return tuple(row.list, row.id)}  // [bed_name, interval_list]      
+        .map { row -> return tuple(row.list, row.id)}  // [bed_name, interval_list]
+        .set { ch_intervals }
+
+
+    // Reduce intervals
+    REDUCE_INTERVALS(
+        ch_intervals
+    )     
+
+    // Merge intervals
+    REDUCE_INTERVALS.out
         .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index, gender_file]        
         .groupTuple(by: 1)
-        .map { bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list->
-            // create a region file
-            //def temp_file = new File("regions_raw.txt")
-            //temp_file.text = interval_list
-
-            //return tuple(temp_file, vcf_list, vcf_idx)
-            return tuple(interval_list, vcf_list, vcf_idx, gender_file_list)
+        .map { bed_name, region_file, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list->
+            return tuple(region_file, vcf_list, vcf_idx, gender_file_list)
         }
         //.dump(tag: 'INTERVAL_VCF_LIST') // [bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list]
         .set { ch_interval_vcfs }
 
-
+    
     MERGE_INTERVAL(
         ch_interval_vcfs,
         params.ref_genome,
