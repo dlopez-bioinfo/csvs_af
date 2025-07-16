@@ -14,7 +14,7 @@ process NORMALIZE_VCF {
         path ref_genome_fai
         
     output:
-        tuple val(bed_name), val(bed_path), val(id), path("*_norm.vcf.gz"), path("*_norm.vcf.gz.csi")
+        tuple val(bed_name), val(bed_path), val(id), path("*_norm.vcf.gz"), path("*_norm.vcf.gz.csi"), path("*_gender.txt")
 
     script:        
         def half_cpus = (task.cpus / 2).toInteger()
@@ -28,12 +28,12 @@ process NORMALIZE_VCF {
 
             id=\$(bcftools query -l ${vcf})
 
-            echo "\${id} ${gender}" > gender.txt
+            echo "\${id} ${gender}" > \${id}_gender.txt
 
             bcftools annotate -x INFO,^FORMAT/GT --force --rename-chrs chr_list.txt ${vcf} | \\
                 bcftools norm --threads ${half_cpus} -d exact -d both -f ${ref_genome} --check-ref ws --targets \$(echo {1..22} X Y MT|sed 's/ /,/g') | \\
                 bcftools +setGT -- -n . -i'FILTER!="PASS"' -tq | \\
-                bcftools +fixploidy -- -s gender.txt | \\
+                bcftools +fixploidy -- -s \${id}_gender.txt | \\
                 bcftools +fill-tags -- -t "AC,AN,AF" | \\
                 bcftools view --threads ${half_cpus} -o ${out} -O z 
 

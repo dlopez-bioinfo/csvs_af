@@ -18,11 +18,17 @@ process CONCAT {
 
     script:
         """
-        OUT="csvs_"\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')".vcf.gz"
+        m=\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')
+        OUT="csvs_\${m::6}.vcf.gz"
 
-        bcftools merge  --threads ${task.cpus} *_merged.vcf.gz | \\
-          bcftools +fill-tags -- -t "AC,AN,AF" | \\
-          bcftools sort -o \${OUT} -Oz
+        #join gender information
+        gender_file="gender.txt"
+        cat *_genderinterval.txt |sort|uniq > \${gender_file} 
+
+        bcftools merge --threads ${task.cpus} *_merged.vcf.gz | \\
+            bcftools +fixploidy -- -s \${gender_file} | \\
+            bcftools +fill-tags -- -t "AC,AN,AF" | \\
+            bcftools sort -o \${OUT} -Oz
         bcftools index \${OUT} --threads ${task.cpus}
         """
 }

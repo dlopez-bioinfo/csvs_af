@@ -101,17 +101,17 @@ workflow {
         .flatten()
         .splitCsv(header: true, sep: '\t')
         .map { row -> return tuple(row.list, row.id)}  // [bed_name, interval_list]      
-        .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index]        
+        .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index, gender_file]        
         .groupTuple(by: 1)
-        .map { bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx ->
+        .map { bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list->
             // create a region file
             //def temp_file = new File("regions_raw.txt")
             //temp_file.text = interval_list
 
             //return tuple(temp_file, vcf_list, vcf_idx)
-            return tuple(interval_list, vcf_list, vcf_idx)
+            return tuple(interval_list, vcf_list, vcf_idx, gender_file_list)
         }
-        //.dump(tag: 'INTERVAL_VCF_LIST') // [bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx]
+        //.dump(tag: 'INTERVAL_VCF_LIST') // [bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list]
         .set { ch_interval_vcfs }
 
 

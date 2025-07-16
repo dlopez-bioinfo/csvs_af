@@ -12,7 +12,7 @@ process PROCESS_INTERVALS {
 
         
     output:
-        path("*_intervals.tsv")
+        path("intervals.tsv")
 
     script:        
         """
@@ -34,12 +34,12 @@ print("Exploding bed_list and grouping IDs")
 intervals["list"] = intervals["list"].str.split(",")
 intervals = intervals.explode("list")
 
-# Agrupar por cromosoma y escribir archivos por separado
-for chrom, group_df in intervals.groupby("chrom"):
-    print(f"Processing chromosome: {chrom}")
-    grouped = group_df.groupby("list").agg({"id": lambda x: ",".join(x)}).reset_index()
-    output_file = f"{chrom}_intervals.tsv"
-    grouped.to_csv(output_file, sep="\t", index=False)
+# Agrupar sin separar por cromosoma
+grouped = intervals.groupby("list", as_index=False).agg({"id": lambda x: ",".join(x)})
+
+output_file = "intervals.tsv"
+grouped.to_csv(output_file, sep="\t", index=False)
+print(f"Output written to: {output_file}")
 '
         """
 }
