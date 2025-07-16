@@ -123,7 +123,7 @@ workflow {
 
     CONCAT(
         MERGE_INTERVAL.out.collect(),
-        params.sample_bed_file
+        file(params.sample_bed_file)
         )
 }
 
