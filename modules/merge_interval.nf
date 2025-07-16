@@ -18,10 +18,10 @@ process MERGE_INTERVAL {
         tuple path("*_merged.vcf.gz"), path("*_merged.vcf.gz.csi"), path("*_genderinterval.txt")
 
     script:                
-        vcf_files = vcf_list.collect { it.getName() }        
-        out = raw_intervals.md5() + "_merged.vcf.gz"
-        half_cpus = (task.cpus / 2).toInteger()
-        quarter_cpus = (half_cpus / 2).toInteger()
+        def vcf_files = vcf_list.collect { it.getName() }        
+        def out = raw_intervals.md5() + "_merged.vcf.gz"
+        def half_cpus = (task.cpus / 2).toInteger()
+        def quarter_cpus = (half_cpus / 2).toInteger()
 
         if (vcf_files.size() == 1) {
             """
