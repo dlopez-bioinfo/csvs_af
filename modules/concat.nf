@@ -10,6 +10,7 @@ process CONCAT {
     publishDir "${params.output_folder}/", mode: 'copy', overwrite: true
 
     input:
+        each(chr)
         path(vcf_list)
         path(gender_file)
         path(sample_bed_file)
@@ -20,9 +21,9 @@ process CONCAT {
     script:
         """
         m=\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')
-        OUT="csvs_\${m::6}.vcf.gz"
+        OUT="csvs_\${m::6}_${chr}.vcf.gz"
 
-        bcftools merge --threads ${task.cpus} *_merged.vcf.gz | \\
+        bcftools merge -r ${chr} --threads ${task.cpus} *_merged.vcf.gz | \\
             bcftools +fixploidy -- -s ${gender_file} | \\
             bcftools +fill-tags -- -t "AC,AN,AF" | \\
             bcftools sort -o \${OUT} -Oz

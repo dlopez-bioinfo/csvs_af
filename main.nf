@@ -126,6 +126,7 @@ workflow {
     )
     
     CONCAT(
+        params.chr_names,
         MERGE_INTERVAL.out.collect(),
         PREPARE_GENDER_FILE.out,
         file(params.sample_bed_file)
