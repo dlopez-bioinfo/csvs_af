@@ -18,6 +18,9 @@ process INTERSECTS {
         def bed_names = bed_names_input.collect { it }.join(' ')
         def bed_paths = bed_paths_input.collect { it.getName() }.join(' ')
         """
+            # create dummy genome region file
+            awk -F"\t" '{print $1"\t0\t"$2}' sizes.hs37d5  > genome.bed
+
             bedtools multiinter \\
                 -header \\
                 -empty \\
