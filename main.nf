@@ -49,7 +49,7 @@ workflow {
     Channel.fromPath(params.sample_bed_file)
         .splitCsv(sep: "\t", strip: true)
         .map { bed_path, vcf_path, gender ->
-            def sample_id = vcf_path.tokenize('/').last().replaceFirst(/\.vcf\.gz$/, '')
+            def sample_id = vcf_path.tokenize('/').last().replaceFirst(/\.vcf\.gz$/, '') + vcf_path.md5()[0..4]
             def bed_hash = bed_path.trim() == params.genome_sample_str ? bed_path : bed_path.md5()[0..7]
             tuple(sample_id, vcf_path, bed_hash, bed_path, gender)
         }        
