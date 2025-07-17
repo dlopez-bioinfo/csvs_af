@@ -23,10 +23,8 @@ process INTERSECTS {
                 -empty \\
                 -g ${sizes} \\
                 -names ${bed_names} \\
-                -i ${bed_paths} > aux.txt
-
-            awk -F "\t" '\$5!~/none/{if(NR>1)\$5="none,"\$5} {print}' OFS="\t" aux.txt > intervals.txt 
-
-            sed -i -r 's/none/${params.genome_sample_str}/g' intervals.txt
+                -i ${bed_paths} | \\
+            awk -F "\t" '\$5!~/none/{if(NR>1)\$5="none,"\$5} {print}' OFS="\t" | \\
+            sed -r 's/none/${params.genome_sample_str}/g' > intervals.txt
         """
 }
