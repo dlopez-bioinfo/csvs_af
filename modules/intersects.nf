@@ -3,7 +3,7 @@
 // Using DSL-2
 nextflow.enable.dsl = 2
 
-process MAKE_INTERVALS {
+process INTERSECTS {
     container "${params.container__bedtools}"
     label 'single_proc'
 

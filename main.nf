@@ -9,13 +9,14 @@ nextflow.enable.dsl = 2
 ================================================================
 */
 //TODO: include modules
-include { MAKE_INTERVALS } from './modules/make_intervals'
+include { INTERSECTS } from './modules/intersects'
 include { NORMALIZE_VCF } from './modules/normalize_vcf'
 include { MERGE_INTERVAL } from './modules/merge_interval'
 include { CONCAT } from './modules/concat'
 include { SORT_BED } from './modules/sort_bed'
-include { PROCESS_INTERVALS } from './modules/process_intervals'
-include { REDUCE_INTERVALS } from './modules/reduce_intervals'
+include { PROCESS_INTERSECTS } from './modules/process_intersects'
+include { PREPARE_INTERSECTIONS } from './modules/prepare_intersections'
+include { PREPARE_GENDER_FILE } from './modules/prepare_gender_file'
 
 /*
 ================================================================
@@ -43,93 +44,92 @@ workflow {
     }
     log.info('--------------------------\n')
 
-
+  
     // set main sample-bed channel
     Channel.fromPath(params.sample_bed_file)
-        .splitText()
-        .map { line -> 
-            def (bed_path, vcf_path, gender) = line.trim().tokenize('\t')
+        .splitCsv(sep: "\t", strip: true)
+        .map { bed_path, vcf_path, gender ->
             def sample_id = vcf_path.tokenize('/').last().replaceFirst(/\.vcf\.gz$/, '')
-            def bed_name = bed_path.trim() == params.genome_sample_str ? bed_path : bed_path.md5()
-            tuple(sample_id, vcf_path, bed_name, bed_path, gender)
+            def bed_hash = bed_path.trim() == params.genome_sample_str ? bed_path : bed_path.md5()[0..7]
+            tuple(sample_id, vcf_path, bed_hash, bed_path, gender)
+        }        
+        .tap { ch_sample_bed }  // emit by-sample intermediate channel [sample_id, vcf_path, bed_hash, bed_path, gender]
+        .collectFile { item ->
+            [ "samples.txt", item.join(",") + '\n' ]
         }
-        //.dump(tag: 'SAMPLE_BED')
-        .set { ch_sample_bed }
-
- 
-    // set bed channel
-        ch_sample_bed
-        .filter { id, vcf, bed_name, bed_path, gender -> bed_path.trim() != params.genome_sample_str }  
-        .map { id, vcf, bed_name, bed_path, gender -> tuple(bed_name, bed_path) }
-        .unique()
-        //.dump(tag: 'BED_LIST')        
-        .set { ch_bed_list }
-
-     // Sort bed and rename to unique names
-    SORT_BED(
-        ch_bed_list
-        )
-
-    SORT_BED.out        
-        .map { id, path -> tuple(id, file(path)) }        
-        .collect(flat:false)         
-        .map { list_of_tuples ->
-            // Ordenar por id (primer elemento del tuple)
-            def sorted = list_of_tuples.sort { a, b -> a[0] <=> b[0] } // sort by bed_name to allow caching
-
-            def names = sorted*.getAt(0)
-            def paths = sorted*.getAt(1)
-            return tuple(names, paths)
-        }
-        //.dump(tag: 'SORTED_BED_LIST2')        
-        .set { ch_sorted_bed_list }
-
-    // create intervals    
-    MAKE_INTERVALS(
-        ch_sorted_bed_list, //[bed_name, bed_path]
-        params.ref_genome_sizes) | PROCESS_INTERVALS
+        .set { ch_sample_bed_file }
+    
 
 
-    // normalize VCFs
+    //************************
+    //*   NORMALIZE VCFS   *//
+    //************************
     NORMALIZE_VCF(
         ch_sample_bed,
         params.ref_genome,
-        params.ref_genome_fai)
+        params.ref_genome_fai
+    )
 
-    
-    // Create interval files
-    PROCESS_INTERVALS.out
-        .flatten()
-        .splitCsv(header: true, sep: '\t')
-        .map { row -> return tuple(row.list, row.id)}  // [bed_name, interval_list]
-        .set { ch_intervals }
+    PREPARE_GENDER_FILE(
+        NORMALIZE_VCF.out.collect { it.getAt(5) },  // list
+    )
 
 
-    // Reduce intervals
-    REDUCE_INTERVALS(
-        ch_intervals
-    )     
 
-    // Merge intervals
-    REDUCE_INTERVALS.out
-        .combine(NORMALIZE_VCF.out, by: 0)  //[ bed_name, bed_path, id, vcf, vcf_index, gender_file]        
-        .groupTuple(by: 1)
-        .map { bed_name, region_file, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list->
-            return tuple(region_file, vcf_list, vcf_idx, gender_file_list)
+    //******************************
+    //*   CREATE INTERSECTIONS   *//
+    //******************************
+    // set unique bed channel
+    ch_sample_bed
+        .filter { sample_id, vcf_path, bed_hash, bed_path, gender -> bed_path.trim() != params.genome_sample_str }  
+        .map { sample_id, vcf_path, bed_hash, bed_path, gender -> tuple(bed_hash, bed_path) }
+        .unique()
+        .set { ch_bed_list }
+
+    // Sort BEDs and rename to unique names
+    SORT_BED(
+        ch_bed_list
+    )
+
+    // Collect sorted beds and create a list of tuples with bed_hash and bed_path
+    SORT_BED.out
+        .toSortedList { a, b -> b[0] <=> a[0] }.map { list_of_pairs ->
+            def ids  = list_of_pairs*.getAt(0)
+            def beds = list_of_pairs*.getAt(1)
+            tuple(ids, beds)
         }
-        //.dump(tag: 'INTERVAL_VCF_LIST') // [bed_name, interval_list, bed_path, sample_id, vcf_list, vcf_idx, gender_file_list]
-        .set { ch_interval_vcfs }
+        .set { ch_sorted_bed_list } //[bed_hash_list, bed_path_list]
+
+    //  Create intersections from sorted beds
+    INTERSECTS(
+        ch_sorted_bed_list, 
+        params.ref_genome_sizes
+    ) | PROCESS_INTERSECTS | splitCsv(header: false, sep: '\t') | set { ch_intersections }  // [beds_list, regions]
 
     
+
+    //*****************
+    //*   MERGING   *//
+    //*****************    
+    PREPARE_INTERSECTIONS(
+        ch_intersections
+            .combine(ch_sample_bed_file),
+        NORMALIZE_VCF.out.collect { it.getAt(3) },  // list of VCFs
+        NORMALIZE_VCF.out.collect { it.getAt(4) },  // list of VCF indices
+    )
+
     MERGE_INTERVAL(
-        ch_interval_vcfs,
+        PREPARE_INTERSECTIONS.out
+            .combine(PREPARE_GENDER_FILE.out), // [regions.bed, vcf_dir, gender_file]
         params.ref_genome,
-        params.ref_genome_fai)
-
-
+        params.ref_genome_fai
+    )
+    
     CONCAT(
         MERGE_INTERVAL.out.collect(),
+        PREPARE_GENDER_FILE.out,
         file(params.sample_bed_file)
-        )
+    )
+
 }
 
