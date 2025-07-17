@@ -12,11 +12,12 @@ nextflow.enable.dsl = 2
 include { INTERSECTS } from './modules/intersects'
 include { NORMALIZE_VCF } from './modules/normalize_vcf'
 include { MERGE_INTERVAL } from './modules/merge_interval'
-include { CONCAT } from './modules/concat'
+include { MERGE_BY_CHROM } from './modules/merge_by_chrom'
 include { SORT_BED } from './modules/sort_bed'
 include { PROCESS_INTERSECTS } from './modules/process_intersects'
 include { PREPARE_INTERSECTIONS } from './modules/prepare_intersections'
 include { PREPARE_GENDER_FILE } from './modules/prepare_gender_file'
+include { CONCAT } from './modules/concat'
 
 /*
 ================================================================
@@ -125,12 +126,16 @@ workflow {
         params.ref_genome_fai
     )
     
-    CONCAT(
+    MERGE_BY_CHROM(
         params.chr_names,
         MERGE_INTERVAL.out.collect(),
         PREPARE_GENDER_FILE.out,
         file(params.sample_bed_file)
     )
 
+    CONCAT(
+        MERGE_BY_CHROM.out.collect(),
+        file(params.sample_bed_file)    
+    )
 }
 
