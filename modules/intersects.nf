@@ -25,9 +25,7 @@ process INTERSECTS {
                 -header \\
                 -empty \\
                 -g ${sizes} \\
-                -names ${bed_names} \\
-                -i ${bed_paths} | \\
-            awk -F "\t" '\$5!~/none/{if(NR>1)\$5="none,"\$5} {print}' OFS="\t" | \\
-            sed -r 's/none/${params.genome_sample_str}/g' > intervals.txt
+                -names ${params.genome_sample_str} ${bed_names} \\
+                -i genome.bed ${bed_paths} > intervals.txt
         """
 }
