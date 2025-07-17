@@ -5,7 +5,7 @@ nextflow.enable.dsl = 2
 
 process PREPARE_INTERSECTIONS {
     container "${params.container__pandas}"
-    label 'high_mem'
+    label 'med_proc'
 
     input:        
         tuple val(intersect_id), val(bed_list), val(region_list), path(sample_bed_file)
