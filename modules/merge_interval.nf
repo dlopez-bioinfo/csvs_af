@@ -30,7 +30,7 @@ process MERGE_INTERVAL {
             bcftools view ${vcf_dir}/*.vcf.gz -o \${out} -Oz -R ${region_file} --threads ${task.cpus}
             
         else
-            bcftools merge ${vcf_dir}/*.vcf.gz -0 -R ${region_file} --threads ${quarter_cpus} | \\
+            bcftools merge ${vcf_dir}/*.vcf.gz -0 -R ${region_file} --force-samples --threads ${quarter_cpus} | \\
                 bcftools norm -d exact -d both -f ${ref_genome} --threads ${quarter_cpus} | \\
                 bcftools +fixploidy -- -s ${gender_file} | \\
                 bcftools +fill-tags -- -t "AC,AN,AF" | \\
