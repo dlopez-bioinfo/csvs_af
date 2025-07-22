@@ -26,7 +26,7 @@ process MERGE_BY_CHROM {
         bcftools merge -r ${chr} *_merged.vcf.gz | \\
             bcftools +fixploidy -- -s ${gender_file} | \\
             bcftools +fill-tags -- -t "AC,AN,AF" | \\
-            bcftools sort -o \${OUT} -Oz --threads ${task.cpus} 
+            bcftools sort -o \${OUT} -Oz
         bcftools index \${OUT} --threads ${task.cpus}
         """
 }
