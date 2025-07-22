@@ -22,7 +22,8 @@ process CONCAT {
         OUT="csvs_\${m::6}_all.vcf.gz"
 
         bcftools concat *.vcf.gz | \\
-            bcftools sort -o \${OUT} -Oz --threads ${task.cpus} 
+            bcftools sort | \\
+            bcftools view -o \${OUT} -Oz --threads ${task.cpus}
         bcftools index \${OUT} --threads ${task.cpus}
         """
 }
