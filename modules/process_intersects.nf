@@ -25,7 +25,7 @@ intervals = intervals.groupby("list").agg({"regions": list}).reset_index(drop=Fa
 
 # sort by number of regions to optimize processing
 intervals["region_count"] = intervals["regions"].apply(len)
-intervals = intervals.sort_values(by="region_count", ascending=False)["list", "regions"]
+intervals = intervals.sort_values(by="region_count", ascending=False).loc[:, ["list", "regions"]]
 
 intervals.to_csv("intervals.tsv", sep="\t", index=True, header=False)
 '
