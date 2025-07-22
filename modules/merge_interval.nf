@@ -5,7 +5,7 @@
 
 process MERGE_INTERVAL {
     container "${params.container__bcftools}"
-    label 'high_proc'
+    label 'med_proc'
 
 
     input:
@@ -27,10 +27,10 @@ process MERGE_INTERVAL {
             bcftools view ${vcf_dir}/*.vcf.gz -o \${out} -Oz -R ${region_file} --threads ${task.cpus}
             
         else
-            bcftools merge ${vcf_dir}/*.vcf.gz -0 -R ${region_file} --force-samples --threads ${task.cpus - 3} | \\
+            bcftools merge ${vcf_dir}/*.vcf.gz -0 -R ${region_file} --force-samples | \\
                 bcftools +fixploidy -- -s ${gender_file} | \\
                 bcftools +fill-tags -- -t "AC,AN,AF" | \\
-                bcftools view -G -o \${out} -O z
+                bcftools view -G -o \${out} -O z --threads ${task.cpus}
         fi
 
         bcftools index \${out} --threads ${task.cpus}
