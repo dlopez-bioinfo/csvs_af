@@ -5,7 +5,7 @@ nextflow.enable.dsl = 2
 
 process CONCAT {
     container "${params.container__bcftools}"
-    label 'high_proc'
+    label 'med_proc'
 
     publishDir "${params.output_folder}/", mode: 'copy', overwrite: true
 
@@ -21,8 +21,8 @@ process CONCAT {
         m=\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')
         OUT="csvs_\${m::6}_all.vcf.gz"
 
-        bcftools concat --threads ${task.cpus} *.vcf.gz | \\
-            bcftools sort -o \${OUT} -Oz
+        bcftools concat *.vcf.gz | \\
+            bcftools sort -o \${OUT} -Oz --threads ${task.cpus} 
         bcftools index \${OUT} --threads ${task.cpus}
         """
 }

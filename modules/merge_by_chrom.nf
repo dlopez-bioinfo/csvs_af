@@ -5,7 +5,7 @@ nextflow.enable.dsl = 2
 
 process MERGE_BY_CHROM {
     container "${params.container__bcftools}"
-    label 'high_proc'
+    label 'med_proc'
 
     publishDir "${params.output_folder}/", mode: 'copy', overwrite: true
 
@@ -23,10 +23,10 @@ process MERGE_BY_CHROM {
         m=\$(md5sum ${sample_bed_file} |cut -f 1 -d ' ')
         OUT="csvs_\${m::6}_${chr}.vcf.gz"
 
-        bcftools merge -r ${chr} --threads ${task.cpus} *_merged.vcf.gz | \\
+        bcftools merge -r ${chr} *_merged.vcf.gz | \\
             bcftools +fixploidy -- -s ${gender_file} | \\
             bcftools +fill-tags -- -t "AC,AN,AF" | \\
-            bcftools sort -o \${OUT} -Oz
+            bcftools sort -o \${OUT} -Oz --threads ${task.cpus} 
         bcftools index \${OUT} --threads ${task.cpus}
         """
 }
